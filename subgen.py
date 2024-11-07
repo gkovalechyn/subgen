@@ -1,3 +1,5 @@
+subgen_version = "__SUBGEN_VERSION__"
+
 from datetime import datetime
 import subprocess
 import os
