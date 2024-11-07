@@ -2,9 +2,8 @@ name: Build_Subgen_Dockerfile_CPU
 
 on:
   push:
-    paths:
-      - 'requirements.txt'
-      - 'Dockerfile.cpu'
+    tags:
+    - '*'
   workflow_dispatch:
 
 jobs:
@@ -20,12 +19,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Get version from subgen.py
-        id: get_version
-        run: |
-          version=$(grep -oP "subgen_version\s*=\s*'\K[^']+" subgen.py)
-          echo "version=$version" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -47,5 +40,4 @@ jobs:
           file: ./Dockerfile.cpu
           push: true
           tags: |
-            mccloud/subgen:cpu
-            mccloud/subgen:${{ env.version }}-cpu
+            gkovalechyn/subgen:${{ github.ref_name }}-cpu

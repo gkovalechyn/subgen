@@ -65,6 +65,14 @@ This potentially has the ability to use CUDA/Nvidia GPU's, but I don't have one 
 
 </details>
 
+# Changes made from McCloudS/subgen
+* Downgraded to cuda 11.8 so it can run on linux hosts.
+* Pinned ctranslate2.
+* Fixed docker build that was always using original repo in dockerfiles.
+* Removed automatic updates in launcher.
+* Changed to manual versioning.
+* Changed to build on tags.
+
 # What is this?
 
 This will transcribe your personal media on a Plex, Emby, or Jellyfin server to create subtitles (.srt) from audio/video files with the following languages: https://github.com/McCloudS/subgen#audio-languages-supported-via-openai and transcribe or translate them into english. It can also be used as a Whisper provider in Bazarr (See below instructions). It technically has support to transcribe from a foreign langauge to itself (IE Japanese > Japanese, see [TRANSCRIBE_OR_TRANSLATE](https://github.com/McCloudS/subgen#variables)). It is currently reliant on webhooks from Jellyfin, Emby, Plex, or Tautulli. This uses stable-ts and faster-whisper which can use both Nvidia GPUs and CPUs.
