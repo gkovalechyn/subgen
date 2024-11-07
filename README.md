@@ -74,7 +74,7 @@ This potentially has the ability to use CUDA/Nvidia GPU's, but I don't have one 
 * Changed to build on tags.
 
 # Examples
-Running large-v3 on a GTX 1070:
+Running large-v3 on a GTX 1070 in OpenMediaVault 7 (Debian 12):
 ![image](https://github.com/user-attachments/assets/7a52f157-37f0-4344-b8c3-88dba58f8204)
 ![image](https://github.com/user-attachments/assets/0a113383-c4f8-4ea4-a2f3-81964f7b8e3e)
 
