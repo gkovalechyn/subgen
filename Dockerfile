@@ -1,8 +1,9 @@
 ARG CUDA_VER=11.8.0-cudnn8-runtime-ubuntu20.04
 
 FROM nvidia/cuda:${CUDA_VER}
-
 WORKDIR /subgen
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 ADD requirements.txt /subgen/requirements.txt
 
