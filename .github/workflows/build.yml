@@ -16,7 +16,7 @@ jobs:
 
       - name: Replace version string  
         run: sed -i 's/__SUBGEN_VERSION__/${{ github.ref_name }}/' subgen.py
-        
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -34,4 +34,4 @@ jobs:
           context: .
           push: true
           tags: 
-            gkovalechyn/subgen:${{ github.ref_name }}-gpu-cu118
+            gkovalechyn/subgen:${{ github.ref_name }}-cu118
