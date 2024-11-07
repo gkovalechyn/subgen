@@ -20,6 +20,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Free Disk Space (Ubuntu)      
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+
       - name: Build and push GPU Docker image
         uses: docker/build-push-action@v5
         with:
