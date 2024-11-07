@@ -1,5 +1,3 @@
-subgen_version = '2024.11.2.126'
-
 from datetime import datetime
 import subprocess
 import os

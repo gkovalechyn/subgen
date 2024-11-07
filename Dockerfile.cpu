@@ -17,7 +17,6 @@ RUN apt-get update \
 
 ENV PYTHONUNBUFFERED=1
 
-ADD launcher.py /subgen/launcher.py
 ADD subgen.py /subgen/subgen.py
 
-CMD [ "bash", "-c", "python3 -u launcher.py" ]
+CMD [ "bash", "-c", "python3 -u subgen.py" ]
