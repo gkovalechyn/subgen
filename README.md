@@ -73,6 +73,35 @@ This potentially has the ability to use CUDA/Nvidia GPU's, but I don't have one 
 * Changed to manual versioning.
 * Changed to build on tags.
 
+# Examples
+Running large-v3 on a GTX 1070:
+![image](https://github.com/user-attachments/assets/7a52f157-37f0-4344-b8c3-88dba58f8204)
+![image](https://github.com/user-attachments/assets/0a113383-c4f8-4ea4-a2f3-81964f7b8e3e)
+
+
+# Running instructions:
+## Docker compose
+´´´yaml
+  whisper:
+    image: gkovalechyn/subgen:v24-11-h3-gpu-cu118
+    restart: unless-stopped
+    volumes:
+      - /data/subgen/models:/subgen/models
+    environment:
+      - "TRANSCRIBE_DEVICE=gpu"
+      - "WHISPER_MODEL=large-v3"
+      - "MODEL_PATH=/subgen/models"
+    ports:
+      - "9000:9000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility, compute]
+´´´
+
 # What is this?
 
 This will transcribe your personal media on a Plex, Emby, or Jellyfin server to create subtitles (.srt) from audio/video files with the following languages: https://github.com/McCloudS/subgen#audio-languages-supported-via-openai and transcribe or translate them into english. It can also be used as a Whisper provider in Bazarr (See below instructions). It technically has support to transcribe from a foreign langauge to itself (IE Japanese > Japanese, see [TRANSCRIBE_OR_TRANSLATE](https://github.com/McCloudS/subgen#variables)). It is currently reliant on webhooks from Jellyfin, Emby, Plex, or Tautulli. This uses stable-ts and faster-whisper which can use both Nvidia GPUs and CPUs.
