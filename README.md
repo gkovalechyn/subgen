@@ -81,7 +81,7 @@ Running large-v3 on a GTX 1070:
 
 # Running instructions:
 ## Docker compose
-´´´yaml
+```yaml
   whisper:
     image: gkovalechyn/subgen:v24-11-h3-gpu-cu118
     restart: unless-stopped
@@ -100,7 +100,7 @@ Running large-v3 on a GTX 1070:
             - driver: nvidia
               count: 1
               capabilities: [gpu, utility, compute]
-´´´
+```
 
 # What is this?
 
