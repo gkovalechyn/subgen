@@ -34,4 +34,4 @@ jobs:
           context: .
           push: true
           tags: 
-            gkovalechyn/subgen:${{ github.ref_name }}-cu118
+            gkovalechyn/subgen:${{ github.ref_name }}
