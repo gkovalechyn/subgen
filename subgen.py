@@ -14,6 +14,7 @@ import asyncio
 from typing import Union
 from fastapi import FastAPI, File, UploadFile, Query, Request
 from fastapi.responses import StreamingResponse
+import uvicorn
 import numpy as np
 import stable_whisper
 from stable_whisper import Segment
@@ -517,3 +518,10 @@ whisper_languages = {
     "br": "breton",
     "eu": "basque",
 }
+
+if __name__ == "__main__":
+    logging.info(f"Subgen v{subgen_version}")
+    logging.info(f"Threads: {str(whisper_threads)}, Concurrent transcriptions: {str(concurrent_transcriptions)}")
+    logging.info(f"Transcribe device: {transcribe_device}, Model: {whisper_model}")
+    os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+    uvicorn.run("__main__:app", host="0.0.0.0", port=int(webhookport), reload=reload_script_on_change, use_colors=True)
