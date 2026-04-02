@@ -1,4 +1,4 @@
-ARG CUDA_VER=11.8.0-cudnn8-runtime-ubuntu20.04
+ARG CUDA_VER=12.2.2-runtime-ubuntu22.04
 
 FROM nvidia/cuda:${CUDA_VER}
 WORKDIR /subgen
@@ -12,8 +12,17 @@ RUN apt-get update \
         python3 \
         python3-pip \
         ffmpeg \
+        pkg-config \
+        libavformat-dev \
+        libavcodec-dev \
+        libavdevice-dev \
+        libavutil-dev \
+        libswscale-dev \
+        libswresample-dev \
+        libavfilter-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --upgrade pip \
     && pip3 install -r requirements.txt
 
 ENV PYTHONUNBUFFERED=1

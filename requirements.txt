@@ -1,10 +1,9 @@
 numpy
-stable-ts
+stable-ts-whisperless
 fastapi
+requests
 faster-whisper
 uvicorn
 python-multipart
-python-ffmpeg
-
-# https://github.com/SYSTRAN/faster-whisper/issues/734
-ctranslate2==3.24.0
+ffmpeg-python
+watchdog
