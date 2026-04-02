@@ -29,4 +29,5 @@ ENV PYTHONUNBUFFERED=1
 
 ADD subgen.py /subgen/subgen.py
 
-CMD [ "bash", "-c", "python3 -u subgen.py" ]
+ENTRYPOINT [ "/bin/bash", "-c" ]
+CMD [ "python3 -u subgen.py" ]
