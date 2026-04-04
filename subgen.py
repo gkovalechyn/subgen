@@ -64,6 +64,8 @@ model = None
 model_cleanup_timer = None
 model_cleanup_lock = Lock()
 model_load_lock = Lock()
+# GPU inference is not thread-safe for VRAM: serialize all model.transcribe() calls on CUDA
+gpu_inference_lock = Lock()
 
 in_docker = os.path.exists('/.dockerenv')
 docker_status = "Docker" if in_docker else "Standalone"
@@ -389,6 +391,11 @@ def asr_task_worker(task_data: dict):
         display_name = task_id
         if '/' not in whisper_model:
             args['progress_callback'] = ProgressHandler(display_name)
+        else:
+            # HF pipeline batches audio chunks internally; batch_size > 1 materializes
+            # encoder attention weight tensors per chunk * batch simultaneously (OOM).
+            # batch_size=1 processes chunks sequentially at the cost of throughput.
+            args.setdefault('batch_size', 1)
 
         if not encode:
             args['audio'] = np.frombuffer(file_content, np.int16).flatten().astype(np.float32) / 32768.0
@@ -404,8 +411,10 @@ def asr_task_worker(task_data: dict):
         if transcribe_device in ("cuda", "gpu"):
             gc.collect()
             torch.cuda.empty_cache()
-
-        result = model.transcribe(task=task, language=language, **args, verbose=None)
+            with gpu_inference_lock:
+                result = model.transcribe(task=task, language=language, **args, verbose=None)
+        else:
+            result = model.transcribe(task=task, language=language, **args, verbose=None)
         appendLine(result)
 
         with _asr_results_lock:
