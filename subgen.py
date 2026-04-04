@@ -396,6 +396,9 @@ def asr_task_worker(task_data: dict):
             # encoder attention weight tensors per chunk * batch simultaneously (OOM).
             # batch_size=1 processes chunks sequentially at the cost of throughput.
             args.setdefault('batch_size', 1)
+            # Cap decoder output length to prevent unbounded KV cache growth (OOM on
+            # fine-tuned models that omit max_new_tokens in their generation_config).
+            args.setdefault('generate_kwargs', {}).setdefault('max_new_tokens', 448)
 
         if not encode:
             args['audio'] = np.frombuffer(file_content, np.int16).flatten().astype(np.float32) / 32768.0
