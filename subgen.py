@@ -459,7 +459,15 @@ def start_model():
                     hf_model_kwargs["torch_dtype"] = torch.float16
                     hf_model_kwargs["attn_implementation"] = "eager"
                 
-                model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
+                try:
+                    model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
+                except TypeError as e:
+                    if 'attn_implementation' in str(e):
+                        logging.warning(f"attn_implementation not supported by installed transformers version, retrying without it: {e}")
+                        hf_model_kwargs.pop('attn_implementation', None)
+                        model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
+                    else:
+                        raise
             else:
                 hf_kwargs = {'huggingface_token': huggingface_token} if huggingface_token else {}
                 model = stable_whisper.load_faster_whisper(whisper_model, download_root=model_location, device=transcribe_device, cpu_threads=whisper_threads, num_workers=concurrent_transcriptions, compute_type=compute_type, **hf_kwargs)
