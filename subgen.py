@@ -383,7 +383,8 @@ def asr_task_worker(task_data: dict):
 
         args = {}
         display_name = task_id
-        args['progress_callback'] = ProgressHandler(display_name)
+        if '/' not in whisper_model:
+            args['progress_callback'] = ProgressHandler(display_name)
 
         if not encode:
             args['audio'] = np.frombuffer(file_content, np.int16).flatten().astype(np.float32) / 32768.0
