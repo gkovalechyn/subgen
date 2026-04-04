@@ -23,6 +23,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade pip \
+    && pip3 install torch --index-url https://download.pytorch.org/whl/cu121 \
     && pip3 install -r requirements.txt
 
 ENV PYTHONUNBUFFERED=1
