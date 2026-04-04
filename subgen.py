@@ -396,9 +396,6 @@ def asr_task_worker(task_data: dict):
             # encoder attention weight tensors per chunk * batch simultaneously (OOM).
             # batch_size=1 processes chunks sequentially at the cost of throughput.
             args.setdefault('batch_size', 1)
-            # Cap decoder output length to prevent unbounded KV cache growth (OOM on
-            # fine-tuned models that omit max_new_tokens in their generation_config).
-            args.setdefault('generate_kwargs', {}).setdefault('max_new_tokens', 448)
 
         if not encode:
             args['audio'] = np.frombuffer(file_content, np.int16).flatten().astype(np.float32) / 32768.0
@@ -468,6 +465,15 @@ def start_model():
                     hf_model_kwargs["model_kwargs"] = {"attn_implementation": "eager"}
                 
                 model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
+
+                # Cap decoder output length on the generation_config directly so it doesn't
+                # need to be threaded through transcribe() kwargs (which stable_whisper
+                # forwards verbatim to model.generate(), breaking on unexpected keys).
+                hf_inner = getattr(model, '_pipe', None)
+                gen_cfg = getattr(getattr(hf_inner, 'model', None), 'generation_config', None)
+                if gen_cfg is not None and getattr(gen_cfg, 'max_new_tokens', None) is None:
+                    gen_cfg.max_new_tokens = 448
+                    logging.debug("Set generation_config.max_new_tokens=448 on HF model")
             else:
                 hf_kwargs = {'huggingface_token': huggingface_token} if huggingface_token else {}
                 model = stable_whisper.load_faster_whisper(whisper_model, download_root=model_location, device=transcribe_device, cpu_threads=whisper_threads, num_workers=concurrent_transcriptions, compute_type=compute_type, **hf_kwargs)
