@@ -5,8 +5,6 @@ WORKDIR /subgen
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ADD requirements.txt /subgen/requirements.txt
-
 RUN apt-get update \
     && apt-get install -y \
         python3 \
@@ -21,9 +19,13 @@ RUN apt-get update \
         libswresample-dev \
         libavfilter-dev \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --upgrade pip \
+    && rm -rf /var/lib/apt/lists/
+
+ADD requirements.txt /subgen/requirements.txt
+
+RUN pip3 install --upgrade pip setuptools \
     && pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cu121 \
+    && pip3 install --no-build-isolation openai-whisper \
     && pip3 install -r requirements.txt
 
 ENV PYTHONUNBUFFERED=1
