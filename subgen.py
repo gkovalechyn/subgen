@@ -452,7 +452,8 @@ def perform_model_cleanup():
             logging.debug("Queue idle; clearing model from memory.")
             if model:
                 try:
-                    model.model.unload_model()
+                    if hasattr(model, 'model') and hasattr(model.model, 'unload_model'):
+                        model.model.unload_model()
                     del model
                     model = None
                     logging.info("Model unloaded from memory")
