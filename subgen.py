@@ -21,6 +21,10 @@ from stable_whisper import Segment
 import ast
 import faster_whisper
 import huggingface_hub
+import torch
+
+# Reduce CUDA memory fragmentation before PyTorch allocator initializes
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 def get_key_by_value(d, value):
     reverse_dict = {v: k for k, v in d.items()}
@@ -427,7 +431,10 @@ def start_model():
                 huggingface_hub.login(token=huggingface_token, add_to_git_credential=False)
             if '/' in whisper_model:
                 logging.info(f"Loading HuggingFace model: {whisper_model}")
-                model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device)
+                hf_model_kwargs = {}
+                if transcribe_device in ("cuda", "gpu"):
+                    hf_model_kwargs["torch_dtype"] = torch.float16
+                model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
             else:
                 hf_kwargs = {'huggingface_token': huggingface_token} if huggingface_token else {}
                 model = stable_whisper.load_faster_whisper(whisper_model, download_root=model_location, device=transcribe_device, cpu_threads=whisper_threads, num_workers=concurrent_transcriptions, compute_type=compute_type, **hf_kwargs)
@@ -459,6 +466,9 @@ def perform_model_cleanup():
                     logging.info("Model unloaded from memory")
                 except Exception as e:
                     logging.error(f"Error unloading model: {e}")
+            if transcribe_device in ("cuda", "gpu"):
+                torch.cuda.empty_cache()
+                logging.debug("CUDA cache cleared")
         else:
             logging.debug("Queue not idle or clear_vram disabled; skipping model cleanup")
         gc.collect()
