@@ -20,6 +20,7 @@ import stable_whisper
 from stable_whisper import Segment
 import ast
 import faster_whisper
+import huggingface_hub
 
 def get_key_by_value(d, value):
     reverse_dict = {v: k for k, v in d.items()}
@@ -421,8 +422,14 @@ def start_model():
     with model_load_lock:
         if model is None:
             logging.debug("Model was purged, need to re-create")
-            hf_kwargs = {'huggingface_token': huggingface_token} if huggingface_token else {}
-            model = stable_whisper.load_faster_whisper(whisper_model, download_root=model_location, device=transcribe_device, cpu_threads=whisper_threads, num_workers=concurrent_transcriptions, compute_type=compute_type, **hf_kwargs)
+            if huggingface_token:
+                huggingface_hub.login(token=huggingface_token, add_to_git_credential=False)
+            if '/' in whisper_model:
+                logging.info(f"Loading HuggingFace model: {whisper_model}")
+                model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device)
+            else:
+                hf_kwargs = {'huggingface_token': huggingface_token} if huggingface_token else {}
+                model = stable_whisper.load_faster_whisper(whisper_model, download_root=model_location, device=transcribe_device, cpu_threads=whisper_threads, num_workers=concurrent_transcriptions, compute_type=compute_type, **hf_kwargs)
 
 def schedule_model_cleanup():
     """Schedule model cleanup with a delay to allow concurrent requests."""

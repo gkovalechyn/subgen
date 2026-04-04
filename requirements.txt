@@ -1,5 +1,7 @@
 numpy
 stable-ts-whisperless
+stable-ts[hf]
+huggingface_hub
 fastapi
 requests
 faster-whisper
