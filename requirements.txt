@@ -1,4 +1,6 @@
 numpy
+accelerate
+optimum
 stable-ts-whisperless
 stable-ts[hf]
 huggingface_hub

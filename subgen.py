@@ -427,13 +427,18 @@ def start_model():
     with model_load_lock:
         if model is None:
             logging.debug("Model was purged, need to re-create")
+
             if huggingface_token:
                 huggingface_hub.login(token=huggingface_token, add_to_git_credential=False)
+
             if '/' in whisper_model:
                 logging.info(f"Loading HuggingFace model: {whisper_model}")
+
                 hf_model_kwargs = {}
+
                 if transcribe_device in ("cuda", "gpu"):
                     hf_model_kwargs["torch_dtype"] = torch.float16
+                
                 model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
             else:
                 hf_kwargs = {'huggingface_token': huggingface_token} if huggingface_token else {}
