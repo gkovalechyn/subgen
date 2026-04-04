@@ -401,12 +401,22 @@ def asr_task_worker(task_data: dict):
 
         args.update(kwargs)
 
+        if transcribe_device in ("cuda", "gpu"):
+            gc.collect()
+            torch.cuda.empty_cache()
+
         result = model.transcribe(task=task, language=language, **args, verbose=None)
         appendLine(result)
 
         with _asr_results_lock:
             _asr_results[task_id] = result
 
+    except torch.cuda.OutOfMemoryError as e:
+        logging.error(f"Error processing ASR (ID: {task_id}): {e}")
+        gc.collect()
+        torch.cuda.empty_cache()
+        with _asr_results_lock:
+            _asr_results[task_id] = None
     except Exception as e:
         logging.error(f"Error processing ASR (ID: {task_id}): {e}", exc_info=True)
         with _asr_results_lock:
@@ -438,6 +448,7 @@ def start_model():
 
                 if transcribe_device in ("cuda", "gpu"):
                     hf_model_kwargs["torch_dtype"] = torch.float16
+                    hf_model_kwargs["attn_implementation"] = "eager"
                 
                 model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
             else:
