@@ -107,6 +107,65 @@ Running large-v3 on a GTX 1070 in OpenMediaVault 7 (Debian 12):
               capabilities: [gpu, utility, compute]
 ```
 
+## Qwen3-ASR variant (Docker compose)
+
+An alternative backend using [Qwen/Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-1.7B) instead of faster-whisper. Requires an Nvidia GPU. Build from `Dockerfile.qwen3asr` / `docker-compose-qwen3asr.yml`.
+
+```yaml
+  subgen-qwen3asr:
+    container_name: subgen-qwen3asr
+    tty: true
+    build:
+      context: .
+      dockerfile: Dockerfile.qwen3asr
+    environment:
+      - "WHISPER_MODEL=Qwen/Qwen3-ASR-1.7B"
+      - "WEBHOOKPORT=9000"
+      - "TRANSCRIBE_DEVICE=cuda"
+      - "DEBUG=True"
+      - "CLEAR_VRAM_ON_COMPLETE=True"
+      - "APPEND=False"
+      - "USE_FORCED_ALIGNER=True"
+      - "FORCED_ALIGNER_MODEL=Qwen/Qwen3-ForcedAligner-0.6B"
+      - "MAX_NEW_TOKENS=1024"
+      - "MAX_INFERENCE_BATCH_SIZE=1"
+      - "DETECT_LANGUAGE_LENGTH=30"
+      # - "FORCE_DETECTED_LANGUAGE_TO=ja"
+      # - "HUGGINGFACE_TOKEN=hf_..."
+    volumes:
+      - "${APPDATA}/subgen/models:/subgen/models"
+    ports:
+      - "9000:9000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+```
+
+### Qwen3-ASR variables
+
+| Variable | Default | Description |
+|---|---|---|
+| WHISPER_MODEL | `Qwen/Qwen3-ASR-1.7B` | HuggingFace model ID. Also supports `Qwen/Qwen3-ASR-8B`. |
+| TRANSCRIBE_DEVICE | `cuda` | `cuda` or `cpu`. |
+| WEBHOOKPORT | `9000` | Port the HTTP server listens on. |
+| DEBUG | `True` | Enable verbose debug logging. |
+| HUGGINGFACE_TOKEN | `` | HuggingFace API token for gated/private models. |
+| FORCE_DETECTED_LANGUAGE_TO | `` | Force a specific language (2-letter code), overriding auto-detection. |
+| CLEAR_VRAM_ON_COMPLETE | `True` | Unload the model from VRAM after each transcription. |
+| APPEND | `False` | Append a transcription credit line to the end of each subtitle. |
+| USE_FORCED_ALIGNER | `True` | Use `Qwen3-ForcedAligner` for word-level timestamps. Disable to skip and use estimated timing. |
+| FORCED_ALIGNER_MODEL | `Qwen/Qwen3-ForcedAligner-0.6B` | HuggingFace model ID for the forced aligner. |
+| MAX_NEW_TOKENS | `1024` | Max tokens the decoder may generate per audio chunk. Increase if long sentences are cut off. |
+| MAX_INFERENCE_BATCH_SIZE | `4` | Number of audio chunks processed in parallel. Reduce to lower VRAM usage. |
+| DETECT_LANGUAGE_LENGTH | `30` | Seconds of audio used for language detection. |
+| MAX_SEGMENT_CHARS | `40` | Max characters per subtitle card before forcing a line break. |
+| MAX_SEGMENT_SEC | `7.0` | Hard cap (seconds) on a single subtitle's duration. |
+| GAP_THRESHOLD_SEC | `0.5` | Silence gap (seconds) that starts a new subtitle segment. |
+
 # What is this?
 
 This is a stripped-down fork of [McCloudS/subgen](https://github.com/McCloudS/subgen) focused exclusively on the **Bazarr Whisper provider** use case. It exposes `/asr` and `/detect-language` endpoints compatible with the [whisper-asr-webservice](https://github.com/ahmetoner/whisper-asr-webservice) API that Bazarr uses. All Plex/Jellyfin/Emby/Tautulli webhook functionality has been removed. It uses stable-ts and faster-whisper (or a HuggingFace Transformers model) and supports both Nvidia GPUs and CPUs.
