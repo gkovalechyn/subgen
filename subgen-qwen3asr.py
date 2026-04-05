@@ -74,7 +74,9 @@ def resolve_language(lang: str) -> str:
 
 # --- SRT / VTT / TXT formatters ---
 SENTENCE_ENDS = frozenset({".", "!", "?", "\u3002", "\uff01", "\uff1f", "\u2026", ";", "\uff1b"})
-MAX_SEGMENT_CHARS = 60
+MAX_SEGMENT_CHARS = 40   # Japanese chars per subtitle line
+MAX_SEGMENT_SEC   = 7.0  # hard cap on subtitle duration
+GAP_THRESHOLD_SEC = 0.4  # silence >= this starts a new segment
 
 
 def _fmt_srt_time(seconds: float) -> str:
@@ -93,19 +95,37 @@ def _group_word_timestamps(time_stamps) -> list:
     segments = []
     current_tokens = []
     current_start = None
+    prev_end = None
+
     for token in time_stamps:
+        token_start = float(token.start_time)
+        token_end = float(token.end_time)
+
+        if current_tokens:
+            joined = "".join(t.text for t in current_tokens).strip()
+            last_char = current_tokens[-1].text.rstrip()[-1:] if current_tokens[-1].text.rstrip() else ""
+            gap = token_start - prev_end if prev_end is not None else 0.0
+            seg_duration = (prev_end - current_start) if prev_end is not None else 0.0
+
+            if (
+                gap >= GAP_THRESHOLD_SEC
+                or last_char in SENTENCE_ENDS
+                or len(joined) >= MAX_SEGMENT_CHARS
+                or seg_duration >= MAX_SEGMENT_SEC
+            ):
+                segments.append((current_start, prev_end, joined))
+                current_tokens = []
+                current_start = None
+
         if current_start is None:
-            current_start = float(token.start_time)
+            current_start = token_start
         current_tokens.append(token)
-        joined = "".join(t.text for t in current_tokens).strip()
-        last_char = token.text.rstrip()[-1:] if token.text.rstrip() else ""
-        if last_char in SENTENCE_ENDS or len(joined) >= MAX_SEGMENT_CHARS:
-            segments.append((current_start, float(current_tokens[-1].end_time), joined))
-            current_tokens = []
-            current_start = None
+        prev_end = token_end
+
     if current_tokens:
         joined = "".join(t.text for t in current_tokens).strip()
-        segments.append((current_start, float(current_tokens[-1].end_time), joined))
+        segments.append((current_start, prev_end, joined))
+
     return segments
 
 
