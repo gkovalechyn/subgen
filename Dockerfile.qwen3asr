@@ -1,4 +1,4 @@
-ARG CUDA_VER=12.4.1-runtime-ubuntu24.04
+ARG CUDA_VER=12.2.2-runtime-ubuntu22.04
 
 FROM nvidia/cuda:${CUDA_VER}
 WORKDIR /subgen
