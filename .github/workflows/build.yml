@@ -9,13 +9,22 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - dockerfile: Dockerfile
+            image: gkovalechyn/subgen
+            script: subgen.py
+          - dockerfile: Dockerfile.qwen3asr
+            image: gkovalechyn/subgen-qwen3asr
+            script: subgen-qwen3asr.py
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Replace version string  
-        run: sed -i 's/__SUBGEN_VERSION__/${{ github.ref_name }}/' subgen.py
+      - name: Replace version string
+        run: sed -i 's/__SUBGEN_VERSION__/${{ github.ref_name }}/' ${{ matrix.script }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -23,15 +32,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Free Disk Space (Ubuntu)      
+      - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: true
 
-      - name: Build and push GPU Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: 
-            gkovalechyn/subgen:${{ github.ref_name }}
+          tags: |
+            ${{ matrix.image }}:${{ github.ref_name }}
+            ${{ matrix.image }}:latest

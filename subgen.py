@@ -270,7 +270,6 @@ def status():
     return {"version" : f"Subgen {subgen_version}, stable-ts {stable_whisper.__version__}, faster-whisper {faster_whisper.__version__} ({docker_status})"}
 
 # idea and some code for asr and detect language from https://github.com/ahmetoner/whisper-asr-webservice
-@app.post("//asr")
 @app.post("/asr")
 async def asr(
         task: Union[str, None] = Query(default="transcribe", enum=["transcribe", "translate"]),
@@ -329,7 +328,6 @@ async def asr(
     else:
         return {"status": "error", "message": "Transcription failed"}
 
-@app.post("//detect-language")
 @app.post("/detect-language")
 async def detect_language(
         audio_file: UploadFile = File(...),
