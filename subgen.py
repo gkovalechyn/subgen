@@ -452,28 +452,45 @@ def start_model():
 
             if '/' in whisper_model:
                 logging.info(f"Loading HuggingFace model: {whisper_model}")
+                from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline as hf_pipeline
 
-                hf_model_kwargs = {}
+                is_cuda = transcribe_device in ("cuda", "gpu")
+                dtype = torch.float16 if is_cuda and torch.cuda.is_available() else torch.float32
+                load_device = "cuda" if transcribe_device == "gpu" else transcribe_device
 
-                if transcribe_device in ("cuda", "gpu"):
-                    hf_model_kwargs["torch_dtype"] = torch.float16
-                    # Pass attn_implementation via model_kwargs so it routes to from_pretrained()
-                    # rather than to pipeline._sanitize_parameters() which rejects it on older
-                    # transformers versions. Eager attention is required so stable_whisper can
-                    # retrieve cross-attention weights for word-level timestamps; SDPA returns
-                    # them in a different structure that causes an IndexError in _extract_token_timestamps.
-                    hf_model_kwargs["model_kwargs"] = {"attn_implementation": "eager"}
-                
-                model = stable_whisper.load_hf_whisper(whisper_model, device=transcribe_device, **hf_model_kwargs)
+                # Load the model directly so we can pass attn_implementation="eager".
+                # stable_whisper's load_hf_whisper builds the model inside load_hf_pipe
+                # before the pipeline is created, so any model_kwargs passed to
+                # load_hf_whisper are never forwarded to from_pretrained — they land in
+                # the pipeline constructor where they are ignored.  Without eager attention
+                # the model uses WhisperSdpaAttention whose cross-attention output structure
+                # differs from what stable_whisper expects, causing an IndexError in
+                # _extract_token_timestamps when it tries to index alignment_heads.
+                hf_model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                    whisper_model,
+                    torch_dtype=dtype,
+                    low_cpu_mem_usage=True,
+                    use_safetensors=True,
+                    attn_implementation="eager",
+                ).to(load_device)
 
-                # Cap decoder output length on the generation_config directly so it doesn't
-                # need to be threaded through transcribe() kwargs (which stable_whisper
-                # forwards verbatim to model.generate(), breaking on unexpected keys).
-                hf_inner = getattr(model, '_pipe', None)
-                gen_cfg = getattr(getattr(hf_inner, 'model', None), 'generation_config', None)
-                if gen_cfg is not None and getattr(gen_cfg, 'max_new_tokens', None) is None:
-                    gen_cfg.max_new_tokens = 448
-                    logging.debug("Set generation_config.max_new_tokens=448 on HF model")
+                processor = AutoProcessor.from_pretrained(whisper_model)
+
+                # Cap decoder output length via generate_kwargs (the max_new_tokens
+                # top-level pipeline kwarg is deprecated since transformers 4.49).
+                hf_pipe = hf_pipeline(
+                    task="automatic-speech-recognition",
+                    model=hf_model,
+                    tokenizer=processor.tokenizer,
+                    feature_extractor=processor.feature_extractor,
+                    chunk_length_s=30,
+                    torch_dtype=dtype,
+                    device=load_device,
+                    generate_kwargs={"max_new_tokens": 448},
+                )
+
+                model = stable_whisper.load_hf_whisper(whisper_model, pipeline=hf_pipe)
+                logging.debug("HF model loaded with eager attention and max_new_tokens=448")
             else:
                 hf_kwargs = {'huggingface_token': huggingface_token} if huggingface_token else {}
                 model = stable_whisper.load_faster_whisper(whisper_model, download_root=model_location, device=transcribe_device, cpu_threads=whisper_threads, num_workers=concurrent_transcriptions, compute_type=compute_type, **hf_kwargs)
