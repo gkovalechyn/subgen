@@ -37,6 +37,9 @@ forced_aligner_model     = os.getenv("FORCED_ALIGNER_MODEL", "Qwen/Qwen3-ForcedA
 max_new_tokens           = int(os.getenv("MAX_NEW_TOKENS", 1024))
 max_inference_batch_size = int(os.getenv("MAX_INFERENCE_BATCH_SIZE", 4))
 detect_language_length   = int(os.getenv("DETECT_LANGUAGE_LENGTH", 30))
+max_segment_chars        = int(os.getenv("MAX_SEGMENT_CHARS", 40))
+max_segment_sec          = float(os.getenv("MAX_SEGMENT_SEC", 7.0))
+gap_threshold_sec        = float(os.getenv("GAP_THRESHOLD_SEC", 0.5))
 
 if transcribe_device == "gpu":
     transcribe_device = "cuda"
@@ -74,9 +77,6 @@ def resolve_language(lang: str) -> str:
 
 # --- SRT / VTT / TXT formatters ---
 SENTENCE_ENDS = frozenset({".", "!", "?", "\u3002", "\uff01", "\uff1f", "\u2026", ";", "\uff1b"})
-MAX_SEGMENT_CHARS = 40   # Japanese chars per subtitle line
-MAX_SEGMENT_SEC   = 7.0  # hard cap on subtitle duration
-GAP_THRESHOLD_SEC = 0.4  # silence >= this starts a new segment
 
 
 def _fmt_srt_time(seconds: float) -> str:
@@ -108,10 +108,10 @@ def _group_word_timestamps(time_stamps) -> list:
             seg_duration = (prev_end - current_start) if prev_end is not None else 0.0
 
             if (
-                gap >= GAP_THRESHOLD_SEC
+                gap >= gap_threshold_sec
                 or last_char in SENTENCE_ENDS
-                or len(joined) >= MAX_SEGMENT_CHARS
-                or seg_duration >= MAX_SEGMENT_SEC
+                or len(joined) >= max_segment_chars
+                or seg_duration >= max_segment_sec
             ):
                 segments.append((current_start, prev_end, joined))
                 current_tokens = []
