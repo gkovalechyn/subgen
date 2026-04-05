@@ -225,13 +225,18 @@ def write_temp_file(file_content: bytes, suffix: str = ".audio") -> str:
         tmp.close()
 
 
-def reencode_to_wav(input_path: str) -> str:
-    """Re-encode any audio input to 16kHz mono WAV via ffmpeg."""
+def reencode_to_wav(input_path: str, is_raw_pcm: bool = False) -> str:
+    """Re-encode any audio input to 16kHz mono WAV via ffmpeg.
+    If is_raw_pcm=True, the input is treated as raw int16 PCM at 16kHz mono.
+    """
     out_path = input_path + "_reencoded.wav"
-    result = subprocess.run(
-        ["ffmpeg", "-y", "-i", input_path, "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", out_path],
-        capture_output=True,
-    )
+    if is_raw_pcm:
+        cmd = ["ffmpeg", "-y", "-f", "s16le", "-ar", "16000", "-ac", "1",
+               "-i", input_path, out_path]
+    else:
+        cmd = ["ffmpeg", "-y", "-i", input_path,
+               "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", out_path]
+    result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg re-encode failed: {result.stderr.decode()}")
     return out_path
@@ -259,11 +264,11 @@ def cleanup(*paths):
 
 
 # --- Transcription ---
-def transcribe_audio(file_content: bytes, language: str, output_format: str) -> str:
+def transcribe_audio(file_content: bytes, language: str, output_format: str, encode: bool = True) -> str:
     raw_path = wav_path = None
     try:
         raw_path = write_temp_file(file_content)
-        wav_path = reencode_to_wav(raw_path)
+        wav_path = reencode_to_wav(raw_path, is_raw_pcm=not encode)
 
         start_model()
         if transcribe_device == "cuda":
@@ -284,11 +289,11 @@ def transcribe_audio(file_content: bytes, language: str, output_format: str) -> 
         unload_model()
 
 
-def detect_language_from_audio(file_content: bytes) -> tuple:
+def detect_language_from_audio(file_content: bytes, encode: bool = True) -> tuple:
     raw_path = wav_path = trimmed_path = None
     try:
         raw_path = write_temp_file(file_content)
-        wav_path = reencode_to_wav(raw_path)
+        wav_path = reencode_to_wav(raw_path, is_raw_pcm=not encode)
         trimmed_path = trim_wav(wav_path, detect_language_length)
 
         start_model()
@@ -369,7 +374,7 @@ async def asr(
 
         with transcribe_lock:
             srt_content = await asyncio.to_thread(
-                transcribe_audio, file_content, effective_language, output or "srt"
+                transcribe_audio, file_content, effective_language, output or "srt", encode
             )
 
         m, s = divmod(int(time.time() - start_time), 60)
@@ -404,7 +409,7 @@ async def detect_language(
     try:
         file_content = await audio_file.read()
         detected_language, language_code = await asyncio.to_thread(
-            detect_language_from_audio, file_content
+            detect_language_from_audio, file_content, encode
         )
         return {"detected_language": detected_language, "language_code": language_code}
 
